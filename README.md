@@ -157,9 +157,9 @@ console.log(areCompatible); // true
 const compatibilityResult = TypeCompatibility.checkCompatibility('number', 'string');
 console.log(compatibilityResult);
 // {
-//   isCompatible: false,
-//   reason: "Type mismatch: number is not compatible with string"
-// }
+  //   isCompatible: false,
+  //   reason: "Type mismatch: number is not compatible with string"
+  // }
 
 // Check if a value node is compatible with a target type
 const stringNode = ValueNodeFactory.createStringNode('test');
@@ -180,10 +180,10 @@ import { SchemaBuilder, defineType } from 'data-builder';
 const tagsSchema = SchemaBuilder.array([SchemaBuilder.string()], { minItems: 1 });
 console.log(tagsSchema);
 // {
-//   kind: 'array',
-//   items: [{ kind: 'primitive', type: 'string' }],
-//   minItems: 1
-// }
+  //   kind: 'array',
+  //   items: [{ kind: 'primitive', type: 'string' }],
+  //   minItems: 1
+  // }
 
 // Define a schema for a tuple (array with fixed elements)
 const pairSchema = SchemaBuilder.array([
@@ -192,12 +192,12 @@ const pairSchema = SchemaBuilder.array([
 ]);
 console.log(pairSchema);
 // {
-//   kind: 'array',
-//   items: [
-//     { kind: 'primitive', type: 'string' },
-//     { kind: 'primitive', type: 'number' }
-//   ]
-// }
+  //   kind: 'array',
+  //   items: [
+  //     { kind: 'primitive', type: 'string' },
+  //     { kind: 'primitive', type: 'number' }
+  //   ]
+  // }
 
 // Define a schema for a complex object with nested properties
 const productSchema = SchemaBuilder.object({
@@ -212,16 +212,16 @@ const productSchema = SchemaBuilder.object({
 });
 console.log(productSchema);
 // {
-//   kind: 'object',
-//   properties: {
-//     id: { kind: 'primitive', type: 'number' },
-//     name: { kind: 'primitive', type: 'string' },
-//     price: { kind: 'primitive', type: 'number' },
-//     tags: { ... },
-//     details: { ... }
-//   },
-//   additionalProperties: false
-// }
+  //   kind: 'object',
+  //   properties: {
+  //     id: { kind: 'primitive', type: 'number' },
+  //     name: { kind: 'primitive', type: 'string' },
+  //     price: { kind: 'primitive', type: 'number' },
+  //     tags: { ... },
+  //     details: { ... }
+  //   },
+  //   additionalProperties: false
+  // }
 ```
 
 **Purpose**: This example demonstrates how to use the schema builder to define complex data structures, including arrays, tuples, and nested objects.
@@ -238,6 +238,7 @@ This section provides a comprehensive overview of the library's API, documenting
 4. [SchemaValidator](#schemavalidator)
 5. [TypeCompatibility](#typecompatibility)
 6. [Utility Functions](#utility-functions)
+7. [defineType](#defineType)
 
 ### SchemaBuilder
 
@@ -364,11 +365,11 @@ const userProfileSchema = SchemaBuilder.object(
   { required: ['id', 'username'], additionalProperties: true }
 );
 // Result: {
-//   kind: 'object',
-//   properties: { id: ..., username: ..., email: ... },
-//   required: ['id', 'username'],
-//   additionalProperties: true
-// }
+  //   kind: 'object',
+  //   properties: { id: ..., username: ..., email: ... },
+  //   required: ['id', 'username'],
+  //   additionalProperties: true
+  // }
 ```
 
 ##### custom(typeName: string, options?: { validator?: (value: any) => boolean; innerSchema?: Schema }): CustomSchema
@@ -498,7 +499,6 @@ Creates a typed value node with validation.
 import { ValueNodeFactory } from './factory/index';
 
 const stringNode = ValueNodeFactory.createStringNode("hello");
-// Result: { type: 'string', value: 'hello' }
 ```
 
 ##### createStringNode(value: string): ValueNode<'string', string>
@@ -509,7 +509,12 @@ Creates a string value node.
 - `value` (string): The string value.
 
 **Returns:**
-- `ValueNode<'string', string>`: A string value node.
+- `ValueNode<'string', string>`: A value node with the string value.
+
+**Example:**
+```typescript
+const nameNode = ValueNodeFactory.createStringNode("John Doe");
+```
 
 ##### createNumberNode(value: number): ValueNode<'number', number>
 
@@ -519,7 +524,12 @@ Creates a number value node.
 - `value` (number): The number value.
 
 **Returns:**
-- `ValueNode<'number', number>`: A number value node.
+- `ValueNode<'number', number>`: A value node with the number value.
+
+**Example:**
+```typescript
+const ageNode = ValueNodeFactory.createNumberNode(25);
+```
 
 ##### createBooleanNode(value: boolean): ValueNode<'boolean', boolean>
 
@@ -529,18 +539,34 @@ Creates a boolean value node.
 - `value` (boolean): The boolean value.
 
 **Returns:**
-- `ValueNode<'boolean', boolean>`: A boolean value node.
+- `ValueNode<'boolean', boolean>`: A value node with the boolean value.
+
+**Example:**
+```typescript
+const isActiveNode = ValueNodeFactory.createBooleanNode(true);
+```
 
 ##### tryCreateNode<T extends string, U>(typeName: T, value: U): { success: true; node: ValueNode<T, U> } | { success: false; error: string }
 
-Attempts to create a typed value node with validation.
+Attempts to create a typed value node with validation, returning a result object.
 
 **Parameters:**
 - `typeName` (T): The name of the type.
 - `value` (U): The value to create a node for.
 
 **Returns:**
-- `{ success: true; node: ValueNode<T, U> }` if successful, otherwise `{ success: false; error: string }`.
+- `{ success: true; node: ValueNode<T, U> }`: If successful, contains the created value node.
+- `{ success: false; error: string }`: If failed, contains the error message.
+
+**Example:**
+```typescript
+const result = ValueNodeFactory.tryCreateNode('email', 'test@example.com');
+if (result.success) {
+  console.log(result.node);
+} else {
+  console.error(result.error);
+}
+```
 
 ### SchemaValidator
 
@@ -557,25 +583,16 @@ Validates a value against a schema.
 - `schema` (Schema): The schema to validate against.
 
 **Returns:**
-- `ValidationResult`: An object indicating whether the value is valid and any validation errors.
+- `ValidationResult`: An object containing validation results.
 
 **Example:**
 ```typescript
 import { SchemaValidator } from './validation/index';
 import { SchemaBuilder } from './core/registry';
 
-const schema = SchemaBuilder.object({
-  name: SchemaBuilder.string(),
-  age: SchemaBuilder.number()
-});
-
-const result = SchemaValidator.validateValue({ name: 'John', age: 30 }, schema);
-console.log(result);
-// { isValid: true, errors: [] }
-
-const invalidResult = SchemaValidator.validateValue({ name: 'John' }, schema);
-console.log(invalidResult);
-// { isValid: false, errors: ['Property "age" is required'] }
+const schema = SchemaBuilder.string();
+const result = SchemaValidator.validateValue("hello", schema);
+console.log(result.isValid); // true
 ```
 
 ### TypeCompatibility
@@ -597,7 +614,7 @@ Checks if two types are compatible.
 
 **Example:**
 ```typescript
-import { TypeCompatibility } from './core/registry';
+import { TypeCompatibility } from './core/types';
 
 const areCompatible = TypeCompatibility.areCompatible('string', 'string');
 console.log(areCompatible); // true
@@ -605,25 +622,20 @@ console.log(areCompatible); // true
 
 ##### checkCompatibility(sourceTypeName: string, targetTypeName: string): CompatibilityResult
 
-Checks if two types are compatible and provides a reason if they are not.
+Checks if two types are compatible and returns a detailed result.
 
 **Parameters:**
 - `sourceTypeName` (string): The name of the source type.
 - `targetTypeName` (string): The name of the target type.
 
 **Returns:**
-- `CompatibilityResult`: An object indicating whether the types are compatible and a reason if they are not.
+- `CompatibilityResult`: An object containing compatibility results and reasons.
 
 **Example:**
 ```typescript
-import { TypeCompatibility } from './core/registry';
-
-const compatibilityResult = TypeCompatibility.checkCompatibility('number', 'string');
-console.log(compatibilityResult);
-// {
-//   isCompatible: false,
-//   reason: "Type mismatch: number is not compatible with string"
-// }
+const result = TypeCompatibility.checkCompatibility('number', 'string');
+console.log(result.isCompatible); // false
+console.log(result.reason); // "Type mismatch: number is not compatible with string"
 ```
 
 ##### isNodeCompatible(node: ValueNode, targetTypeName: string): CompatibilityResult
@@ -635,39 +647,34 @@ Checks if a value node is compatible with a target type.
 - `targetTypeName` (string): The name of the target type.
 
 **Returns:**
-- `CompatibilityResult`: An object indicating whether the node is compatible with the target type and a reason if it is not.
+- `CompatibilityResult`: An object containing compatibility results and reasons.
 
 **Example:**
 ```typescript
-import { TypeCompatibility } from './core/registry';
-import { ValueNodeFactory } from './factory/index';
-
 const stringNode = ValueNodeFactory.createStringNode('test');
-const nodeCompatibility = TypeCompatibility.isNodeCompatible(stringNode, 'string');
-console.log(nodeCompatibility); // { isCompatible: true }
+const result = TypeCompatibility.isNodeCompatible(stringNode, 'string');
+console.log(result.isCompatible); // true
 ```
 
 ### Utility Functions
 
-The library provides several utility functions to assist with common tasks.
-
 #### validateTypeValue(typeName: string, value: unknown): string[]
 
-Validates a value against a registered type and returns an array of validation errors.
+Validates a value against a registered type and returns an array of error messages.
 
 **Parameters:**
 - `typeName` (string): The name of the type to validate against.
 - `value` (unknown): The value to validate.
 
 **Returns:**
-- `string[]`: An array of validation error messages, or an empty array if the value is valid.
+- `string[]`: An array of error messages, or an empty array if the value is valid.
 
 **Example:**
 ```typescript
-import { validateTypeValue } from './validation/index';
+import { validateTypeValue } from './core/registry';
 
 const errors = validateTypeValue('email', 'invalid-email');
-console.log(errors); // ["Custom validation failed for type: email"]
+console.log(errors); // ["Schema validation failed for type 'email': Custom validation failed for type: email"]
 ```
 
 #### inspectType(typeName: string): void
@@ -682,4 +689,45 @@ Inspects a registered type and logs its details to the console.
 import { inspectType } from './core/registry';
 
 inspectType('email');
-// Logs details about the 'email' type to the console
+// Output: {
+//   name: 'email',
+//   schema: { kind: 'custom', typeName: 'email', validator: [Function] },
+//   description: 'Represents an email address format'
+// }
+```
+
+### defineType
+
+Defines and registers a new type with a schema and optional description.
+
+```typescript
+defineType<T extends string>(
+  name: T,
+  schema: Schema,
+  description?: string
+): TypeDefinition<T>
+```
+
+**Parameters:**
+
+- `name` (T): The name of the type. This must be a unique string that identifies the type.
+- `schema` (Schema): The schema definition for the type. This can be created using the `SchemaBuilder`.
+- `description` (string, optional): A description of the type, explaining its purpose or usage.
+
+**Returns:**
+
+- `TypeDefinition<T>`: The registered type definition, which includes the name, schema, and description.
+
+**Example:**
+
+```typescript
+import { SchemaBuilder, defineType } from 'data-builder';
+
+// Define a custom email type with validation
+const EmailType = defineType(
+  'email',
+  SchemaBuilder.custom('email', {
+    validator: (value) => typeof value === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+  }),
+  'Represents an email address format'
+);
