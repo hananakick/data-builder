@@ -1,6 +1,13 @@
 # data-builder
 
+[한국어 버전으로 전환](README-ko.md)
+
 `data-builder` is a TypeScript library that provides a schema builder and a type registry. Its primary purpose is to facilitate the definition and management of various data types in a structured and type-safe manner. The library offers key features such as schema building, type registration, value node creation, validation, and type compatibility checking.
+
+You can install this library using:
+```
+npm i @hananakick/data-builder
+```
 
 ## Library Purpose
 

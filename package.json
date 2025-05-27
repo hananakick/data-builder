@@ -1,6 +1,6 @@
 {
   "name": "@hananakick/data-builder",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "type": "module",
   "main": "bundle/index.cjs",
   "module": "bundle/index.mjs",
