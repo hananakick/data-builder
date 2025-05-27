@@ -1,6 +1,6 @@
-.build/
-node_modules/
-src/
-tsconfig.json
-.gitignore
-.npmignore
+/.build/
+/node_modules/
+/src/
+/tsconfig.json
+/.gitignore
+/.npmignore
