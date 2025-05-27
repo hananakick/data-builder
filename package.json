@@ -4,7 +4,7 @@
   "type": "module",
   "main": "bundle/index.cjs",
   "module": "bundle/index.mjs",
-  "types": "bundle/index.d.ts",
+  "types": "bundle/src/index.d.ts",
   "exports": {
     "import": "./bundle/index.mjs",
     "require": "./bundle/index.cjs"
