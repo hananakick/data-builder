@@ -10,7 +10,7 @@
     "require": "./bundle/index.cjs"
   },
   "scripts": {
-    "start": "node bundle/index.js",
+    "start": "node bundle/index.mjs",
     "build": "node .build/build.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
