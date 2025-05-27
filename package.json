@@ -1,5 +1,5 @@
 {
-  "name": "data-builder",
+  "name": "@hananakick/data-builder",
   "version": "1.0.0",
   "type": "module",
   "main": "bundle/index.cjs",
@@ -17,7 +17,7 @@
   },
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description": "## Library Overview `data-builder` is a library that provides a schema builder and a type registry. It offers functionalities to define and manage various data types. Its main features include the ability to create schemas for basic types (string, number, boolean), arrays, objects, and custom types.",
   "devDependencies": {
     "esbuild": "^0.25.5",
     "typescript": "^5.8.3"
