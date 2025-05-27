@@ -6,9 +6,9 @@
   "module": "bundle/index.mjs",
   "types": "bundle/src/index.d.ts",
   "exports": {
+    "types": "./bundle/src/index.d.ts",
     "import": "./bundle/index.mjs",
-    "require": "./bundle/index.cjs",
-    "types": "./bundle/src/index.d.ts"
+    "require": "./bundle/index.cjs"
   },
   "scripts": {
     "start": "node bundle/index.mjs",
