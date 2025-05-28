@@ -7,7 +7,7 @@ import { TypeRegistry } from '../core/registry';
 import { SchemaValidator } from '../validation/index';
 
 // 값 노드 팩토리
-export class ValueNodeFactory {
+export class ValueFactory {
     static async createTypedNode<T extends string, U>(typeName: T, value: U): Promise<ValueNode<T, U>> {
         const typeDefinition = TypeRegistry.getType(typeName);
         if (!typeDefinition) {

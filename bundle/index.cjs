@@ -27,7 +27,7 @@ __export(index_exports, {
   SchemaValidator: () => SchemaValidator,
   TypeCompatibility: () => TypeCompatibility,
   TypeRegistry: () => TypeRegistry,
-  ValueNodeFactory: () => ValueNodeFactory,
+  ValueFactory: () => ValueFactory,
   defineType: () => defineType,
   inspectType: () => inspectType,
   listAllTypes: () => listAllTypes,
@@ -589,7 +589,7 @@ var TypeCompatibility = class {
 };
 
 // src/factory/index.ts
-var ValueNodeFactory = class {
+var ValueFactory = class {
   static async createTypedNode(typeName, value) {
     const typeDefinition = TypeRegistry.getType(typeName);
     if (!typeDefinition) {

@@ -552,7 +552,7 @@ var TypeCompatibility = class {
 };
 
 // src/factory/index.ts
-var ValueNodeFactory = class {
+var ValueFactory = class {
   static async createTypedNode(typeName, value) {
     const typeDefinition = TypeRegistry.getType(typeName);
     if (!typeDefinition) {
@@ -618,7 +618,7 @@ export {
   SchemaValidator,
   TypeCompatibility,
   TypeRegistry,
-  ValueNodeFactory,
+  ValueFactory,
   defineType,
   inspectType,
   listAllTypes,
