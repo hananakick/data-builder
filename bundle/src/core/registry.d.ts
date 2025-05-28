@@ -115,7 +115,7 @@ export declare const SchemaBuilder: {
      * Custom types allow for user-defined validation logic and can optionally wrap an existing schema.
      * @param {string} typeName - The unique name identifying this custom type. This name is used for registration and lookup.
      * @param {object} [options] - Optional configuration for the custom type.
-     * @param {(value: any) => boolean} [options.validator] - A function to validate the value of this custom type. Should return true if valid, false otherwise.
+     * @param {(value: any) => boolean | Promise<boolean>} [options.validator] - A function to validate the value of this custom type. Should return true if valid, false otherwise. Can be async.
      * @param {Schema} [options.innerSchema] - An underlying schema that this custom type is based on or extends.
      * @returns {CustomSchema} A schema object representing a custom type.
      * @example
@@ -144,7 +144,7 @@ export declare const SchemaBuilder: {
      * ```
      */
     custom(typeName: string, options?: {
-        validator?: (value: any) => boolean;
+        validator?: (value: any) => boolean | Promise<boolean>;
         innerSchema?: Schema;
     }): CustomSchema;
 };

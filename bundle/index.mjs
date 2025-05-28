@@ -121,7 +121,7 @@ var SchemaBuilder = {
    * Custom types allow for user-defined validation logic and can optionally wrap an existing schema.
    * @param {string} typeName - The unique name identifying this custom type. This name is used for registration and lookup.
    * @param {object} [options] - Optional configuration for the custom type.
-   * @param {(value: any) => boolean} [options.validator] - A function to validate the value of this custom type. Should return true if valid, false otherwise.
+   * @param {(value: any) => boolean | Promise<boolean>} [options.validator] - A function to validate the value of this custom type. Should return true if valid, false otherwise. Can be async.
    * @param {Schema} [options.innerSchema] - An underlying schema that this custom type is based on or extends.
    * @returns {CustomSchema} A schema object representing a custom type.
    * @example
@@ -153,7 +153,13 @@ var SchemaBuilder = {
     return {
       kind: "custom",
       typeName,
-      validator: options?.validator,
+      validator: options?.validator ? (value) => {
+        if (!options.validator) {
+          return Promise.resolve(false);
+        }
+        const result = options.validator(value);
+        return result instanceof Promise ? result : Promise.resolve(result);
+      } : void 0,
       innerSchema: options?.innerSchema
     };
   }
@@ -250,20 +256,20 @@ var SchemaValidator = class {
    * // result = { isValid: true, errors: [] }
    * ```
    */
-  static validateValue(value, schema) {
+  static async validateValue(value, schema) {
     const errors = [];
     switch (schema.kind) {
       case "primitive":
         this.validatePrimitive(value, schema, errors);
         break;
       case "array":
-        this.validateArray(value, schema, errors);
+        await this.validateArray(value, schema, errors);
         break;
       case "object":
-        this.validateObject(value, schema, errors);
+        await this.validateObject(value, schema, errors);
         break;
       case "custom":
-        this.validateCustom(value, schema, errors);
+        await this.validateCustom(value, schema, errors);
         break;
       default:
         const _exhaustiveCheck = schema;
@@ -297,7 +303,7 @@ var SchemaValidator = class {
    * @param {ArraySchema} schema - The array schema.
    * @param {string[]} errors - An array to collect validation errors.
    */
-  static validateArray(value, schema, errors) {
+  static async validateArray(value, schema, errors) {
     if (!Array.isArray(value)) {
       errors.push("Expected array");
       return;
@@ -311,26 +317,28 @@ var SchemaValidator = class {
     if (schema.items && schema.items.length > 0) {
       if (schema.items.length === 1) {
         const itemSchema = schema.items[0];
-        value.forEach((item, index) => {
-          const itemValidation = this.validateValue(item, itemSchema);
+        for (let i = 0; i < value.length; i++) {
+          const item = value[i];
+          const itemValidation = await this.validateValue(item, itemSchema);
           if (!itemValidation.isValid) {
-            const itemErrors = itemValidation.errors.map((error) => `Item[${index}]: ${error}`);
+            const itemErrors = itemValidation.errors.map((error) => `Item[${i}]: ${error}`);
             errors.push(...itemErrors);
           }
-        });
+        }
       } else {
         if (value.length !== schema.items.length) {
           errors.push(`Expected tuple of ${schema.items.length} elements, but got ${value.length} elements`);
         }
-        schema.items.forEach((itemSchema, index) => {
-          if (index < value.length) {
-            const itemValidation = this.validateValue(value[index], itemSchema);
+        for (let i = 0; i < schema.items.length; i++) {
+          const itemSchema = schema.items[i];
+          if (i < value.length) {
+            const itemValidation = await this.validateValue(value[i], itemSchema);
             if (!itemValidation.isValid) {
-              const itemErrors = itemValidation.errors.map((error) => `Item at index ${index}: ${error}`);
+              const itemErrors = itemValidation.errors.map((error) => `Item at index ${i}: ${error}`);
               errors.push(...itemErrors);
             }
           }
-        });
+        }
       }
     } else if (schema.items && schema.items.length === 0 && value.length > 0) {
       errors.push("Array schema defines an empty tuple, but received a non-empty array.");
@@ -343,7 +351,7 @@ var SchemaValidator = class {
    * @param {ObjectSchema} schema - The object schema.
    * @param {string[]} errors - An array to collect validation errors.
    */
-  static validateObject(value, schema, errors) {
+  static async validateObject(value, schema, errors) {
     if (typeof value !== "object" || value === null || Array.isArray(value)) {
       errors.push("Expected object");
       return;
@@ -358,7 +366,7 @@ var SchemaValidator = class {
     }
     for (const [key, propSchema] of Object.entries(schema.properties)) {
       if (key in obj) {
-        const propValidation = this.validateValue(obj[key], propSchema);
+        const propValidation = await this.validateValue(obj[key], propSchema);
         if (!propValidation.isValid) {
           const propErrors = propValidation.errors.map((error) => `Property '${key}': ${error}`);
           errors.push(...propErrors);
@@ -381,12 +389,16 @@ var SchemaValidator = class {
    * @param {CustomSchema} schema - The custom schema.
    * @param {string[]} errors - An array to collect validation errors.
    */
-  static validateCustom(value, schema, errors) {
-    if (schema.validator && !schema.validator(value)) {
-      errors.push(`Custom validation failed for type: ${schema.typeName}`);
+  static async validateCustom(value, schema, errors) {
+    if (schema.validator) {
+      const result = schema.validator(value);
+      const isValid = await result;
+      if (!isValid) {
+        errors.push(`Custom validation failed for type: ${schema.typeName}`);
+      }
     }
     if (schema.innerSchema) {
-      const innerValidation = this.validateValue(value, schema.innerSchema);
+      const innerValidation = await this.validateValue(value, schema.innerSchema);
       if (!innerValidation.isValid) {
         errors.push(...innerValidation.errors);
       }
@@ -541,29 +553,29 @@ var TypeCompatibility = class {
 
 // src/factory/index.ts
 var ValueNodeFactory = class {
-  static createTypedNode(typeName, value) {
+  static async createTypedNode(typeName, value) {
     const typeDefinition = TypeRegistry.getType(typeName);
     if (!typeDefinition) {
       throw new Error(`Unknown type: ${typeName}. Available types: ${TypeRegistry.getTypeNames().join(", ")}`);
     }
-    const validation = SchemaValidator.validateValue(value, typeDefinition.schema);
+    const validation = await SchemaValidator.validateValue(value, typeDefinition.schema);
     if (!validation.isValid) {
       throw new Error(`Schema validation failed for type '${typeName}': ${validation.errors.join("; ")}`);
     }
     return { type: typeName, value };
   }
-  static createStringNode(value) {
-    return this.createTypedNode("string", value);
+  static async createStringNode(value) {
+    return await this.createTypedNode("string", value);
   }
-  static createNumberNode(value) {
-    return this.createTypedNode("number", value);
+  static async createNumberNode(value) {
+    return await this.createTypedNode("number", value);
   }
-  static createBooleanNode(value) {
-    return this.createTypedNode("boolean", value);
+  static async createBooleanNode(value) {
+    return await this.createTypedNode("boolean", value);
   }
-  static tryCreateNode(typeName, value) {
+  static async tryCreateNode(typeName, value) {
     try {
-      const node = this.createTypedNode(typeName, value);
+      const node = await this.createTypedNode(typeName, value);
       return { success: true, node };
     } catch (error) {
       return {
@@ -573,12 +585,12 @@ var ValueNodeFactory = class {
     }
   }
 };
-function validateTypeValue(typeName, value) {
+async function validateTypeValue(typeName, value) {
   const typeDefinition = TypeRegistry.getType(typeName);
   if (!typeDefinition) {
     return [`Unknown type: ${typeName}`];
   }
-  const validation = SchemaValidator.validateValue(value, typeDefinition.schema);
+  const validation = await SchemaValidator.validateValue(value, typeDefinition.schema);
   return validation.errors;
 }
 function inspectType(typeName) {

@@ -19,7 +19,7 @@ export declare class SchemaValidator {
      * // result = { isValid: true, errors: [] }
      * ```
      */
-    static validateValue(value: unknown, schema: Schema): ValidationResult;
+    static validateValue(value: unknown, schema: Schema): Promise<ValidationResult>;
     /**
      * Validates a value against a primitive schema.
      * @internal

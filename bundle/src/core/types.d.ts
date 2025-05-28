@@ -32,7 +32,7 @@ export interface ObjectSchema extends Schema {
 export interface CustomSchema extends Schema {
     readonly kind: 'custom';
     readonly typeName: string;
-    readonly validator?: (value: any) => boolean;
+    readonly validator?: (value: any) => Promise<boolean>;
     readonly innerSchema?: Schema;
 }
 export interface ValidationResult {

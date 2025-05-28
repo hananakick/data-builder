@@ -2,11 +2,11 @@
  * 스키마 검증 & 타입 호환성 검사
  */
 
-import { 
-    Schema, 
-    PrimitiveSchema, 
-    ArraySchema, 
-    ObjectSchema, 
+import {
+    Schema,
+    PrimitiveSchema,
+    ArraySchema,
+    ObjectSchema,
     CustomSchema,
     ValidationResult,
     CompatibilityResult,
@@ -31,30 +31,30 @@ export class SchemaValidator {
      * // result = { isValid: true, errors: [] }
      * ```
      */
-    static validateValue(value: unknown, schema: Schema): ValidationResult {
+    static async validateValue(value: unknown, schema: Schema): Promise<ValidationResult> {
         const errors: string[] = [];
-        
+
         switch (schema.kind) {
             case 'primitive':
                 this.validatePrimitive(value, schema as PrimitiveSchema, errors);
                 break;
             case 'array':
-                this.validateArray(value, schema as ArraySchema, errors);
+                await this.validateArray(value, schema as ArraySchema, errors);
                 break;
             case 'object':
-                this.validateObject(value, schema as ObjectSchema, errors);
+                await this.validateObject(value, schema as ObjectSchema, errors);
                 break;
             case 'custom':
-                this.validateCustom(value, schema as CustomSchema, errors);
+                await this.validateCustom(value, schema as CustomSchema, errors);
                 break;
             default:
                 const _exhaustiveCheck = schema;
                 throw new Error(`Unknown schema kind: ${(_exhaustiveCheck as any).kind}`);
         }
-        
+
         return { isValid: errors.length === 0, errors };
     }
-    
+
     /**
      * Validates a value against a primitive schema.
      * @internal
@@ -65,17 +65,17 @@ export class SchemaValidator {
     private static validatePrimitive(value: unknown, schema: PrimitiveSchema, errors: string[]): void {
         const expectedType = schema.type;
         const actualType = typeof value;
-        
+
         if (expectedType === 'number' && actualType === 'number' && isNaN(value as number)) {
             errors.push('Number value cannot be NaN');
             return;
         }
-        
+
         if (actualType !== expectedType) {
             errors.push(`Expected ${expectedType}, got ${actualType}`);
         }
     }
-    
+
     /**
      * Validates a value against an array schema.
      * Handles both homogeneous arrays and tuples.
@@ -84,12 +84,12 @@ export class SchemaValidator {
      * @param {ArraySchema} schema - The array schema.
      * @param {string[]} errors - An array to collect validation errors.
      */
-    private static validateArray(value: unknown, schema: ArraySchema, errors: string[]): void {
+    private static async validateArray(value: unknown, schema: ArraySchema, errors: string[]): Promise<void> {
         if (!Array.isArray(value)) {
             errors.push('Expected array');
             return;
         }
-        
+
         // Overall array length constraints
         if (schema.minItems !== undefined && value.length < schema.minItems) {
             errors.push(`Array must have at least ${schema.minItems} items, got ${value.length}`);
@@ -103,13 +103,14 @@ export class SchemaValidator {
             if (schema.items.length === 1) {
                 // Homogeneous array: all items conform to schema.items[0]
                 const itemSchema = schema.items[0];
-                value.forEach((item, index) => {
-                    const itemValidation = this.validateValue(item, itemSchema);
+                for (let i = 0; i < value.length; i++) {
+                    const item = value[i];
+                    const itemValidation = await this.validateValue(item, itemSchema);
                     if (!itemValidation.isValid) {
-                        const itemErrors = itemValidation.errors.map(error => `Item[${index}]: ${error}`);
+                        const itemErrors = itemValidation.errors.map(error => `Item[${i}]: ${error}`);
                         errors.push(...itemErrors);
                     }
-                });
+                }
             } else {
                 // Tuple: value[i] conforms to schema.items[i]
                 // For tuples, the length of the data array should match the length of the schema.items array.
@@ -120,22 +121,23 @@ export class SchemaValidator {
                 // If value.length is shorter, previous error handles it.
                 // If value.length is longer, previous error handles it.
                 // We iterate through schema.items to ensure each defined tuple element is checked.
-                schema.items.forEach((itemSchema, index) => {
-                    if (index < value.length) { // Check if value has an element at this index
-                        const itemValidation = this.validateValue(value[index], itemSchema);
+                for (let i = 0; i < schema.items.length; i++) {
+                    const itemSchema = schema.items[i];
+                    if (i < value.length) { // Check if value has an element at this index
+                        const itemValidation = await this.validateValue(value[i], itemSchema);
                         if (!itemValidation.isValid) {
-                            const itemErrors = itemValidation.errors.map(error => `Item at index ${index}: ${error}`);
+                            const itemErrors = itemValidation.errors.map(error => `Item at index ${i}: ${error}`);
                             errors.push(...itemErrors);
                         }
                     } // If index >= value.length, the length mismatch error already covers missing elements.
-                });
+                }
             }
         } else if (schema.items && schema.items.length === 0 && value.length > 0) {
             // Schema defines an empty tuple (e.g. `[]`), but data array is not empty.
             errors.push("Array schema defines an empty tuple, but received a non-empty array.");
         }
     }
-    
+
     /**
      * Validates a value against an object schema.
      * @internal
@@ -143,14 +145,14 @@ export class SchemaValidator {
      * @param {ObjectSchema} schema - The object schema.
      * @param {string[]} errors - An array to collect validation errors.
      */
-    private static validateObject(value: unknown, schema: ObjectSchema, errors: string[]): void {
+    private static async validateObject(value: unknown, schema: ObjectSchema, errors: string[]): Promise<void> {
         if (typeof value !== 'object' || value === null || Array.isArray(value)) {
             errors.push('Expected object');
             return;
         }
-        
+
         const obj = value as Record<string, unknown>;
-        
+
         if (schema.required) {
             for (const requiredKey of schema.required) {
                 if (!(requiredKey in obj)) {
@@ -158,17 +160,17 @@ export class SchemaValidator {
                 }
             }
         }
-        
+
         for (const [key, propSchema] of Object.entries(schema.properties)) {
             if (key in obj) {
-                const propValidation = this.validateValue(obj[key], propSchema);
+                const propValidation = await this.validateValue(obj[key], propSchema);
                 if (!propValidation.isValid) {
                     const propErrors = propValidation.errors.map(error => `Property '${key}': ${error}`);
                     errors.push(...propErrors);
                 }
             }
         }
-        
+
         if (!schema.additionalProperties) {
             const allowedKeys = new Set(Object.keys(schema.properties));
             for (const key of Object.keys(obj)) {
@@ -178,7 +180,7 @@ export class SchemaValidator {
             }
         }
     }
-    
+
     /**
      * Validates a value against a custom schema.
      * @internal
@@ -186,13 +188,17 @@ export class SchemaValidator {
      * @param {CustomSchema} schema - The custom schema.
      * @param {string[]} errors - An array to collect validation errors.
      */
-    private static validateCustom(value: unknown, schema: CustomSchema, errors: string[]): void {
-        if (schema.validator && !schema.validator(value)) {
-            errors.push(`Custom validation failed for type: ${schema.typeName}`);
+    private static async validateCustom(value: unknown, schema: CustomSchema, errors: string[]): Promise<void> {
+        if (schema.validator) {
+            const result = schema.validator(value);
+            const isValid = await result;
+            if (!isValid) {
+                errors.push(`Custom validation failed for type: ${schema.typeName}`);
+            }
         }
-        
+
         if (schema.innerSchema) {
-            const innerValidation = this.validateValue(value, schema.innerSchema);
+            const innerValidation = await this.validateValue(value, schema.innerSchema);
             if (!innerValidation.isValid) {
                 errors.push(...innerValidation.errors);
             }
@@ -219,17 +225,17 @@ export class TypeCompatibility {
         if (sourceTypeName === targetTypeName) {
             return true;
         }
-        
+
         const sourceType = TypeRegistry.getType(sourceTypeName);
         const targetType = TypeRegistry.getType(targetTypeName);
-        
+
         if (!sourceType || !targetType) {
             return false;
         }
-        
+
         return this.areSchemasCompatible(sourceType.schema, targetType.schema);
     }
-    
+
     /**
      * Checks compatibility between a source type and a target type, providing a reason if not compatible.
      * @param {string} sourceTypeName - The name of the source type.
@@ -248,34 +254,34 @@ export class TypeCompatibility {
         if (sourceTypeName === targetTypeName) {
             return { isCompatible: true };
         }
-        
+
         const sourceType = TypeRegistry.getType(sourceTypeName);
         const targetType = TypeRegistry.getType(targetTypeName);
-        
+
         if (!sourceType) {
-            return { 
-                isCompatible: false, 
-                reason: `Unknown source type: ${sourceTypeName}` 
+            return {
+                isCompatible: false,
+                reason: `Unknown source type: ${sourceTypeName}`
             };
         }
-        
+
         if (!targetType) {
-            return { 
-                isCompatible: false, 
-                reason: `Unknown target type: ${targetTypeName}` 
+            return {
+                isCompatible: false,
+                reason: `Unknown target type: ${targetTypeName}`
             };
         }
-        
+
         if (!this.areSchemasCompatible(sourceType.schema, targetType.schema)) {
-            return { 
-                isCompatible: false, 
-                reason: `Type mismatch: ${sourceTypeName} is not compatible with ${targetTypeName}` 
+            return {
+                isCompatible: false,
+                reason: `Type mismatch: ${sourceTypeName} is not compatible with ${targetTypeName}`
             };
         }
-        
+
         return { isCompatible: true };
     }
-    
+
     /**
      * Checks if a given ValueNode is compatible with a target type name.
      * @param {ValueNode} node - The ValueNode to check.
@@ -291,7 +297,7 @@ export class TypeCompatibility {
     static isNodeCompatible(node: ValueNode, targetTypeName: string): CompatibilityResult {
         return this.checkCompatibility(node.type, targetTypeName);
     }
-    
+
     /**
      * @internal
      */
@@ -299,12 +305,12 @@ export class TypeCompatibility {
         if (sourceSchema.kind !== targetSchema.kind) {
             return false;
         }
-        
+
         switch (sourceSchema.kind) {
             case 'primitive':
                 if (targetSchema.kind !== 'primitive') return false;
                 return (sourceSchema as PrimitiveSchema).type === (targetSchema as PrimitiveSchema).type;
-                
+
             case 'array':
                 if (targetSchema.kind !== 'array') return false;
                 const sourceArraySchema = sourceSchema as ArraySchema;
@@ -321,7 +327,7 @@ export class TypeCompatibility {
                 // Both are homogeneous array definitions
                 if (sourceArraySchema.items.length === 1 && targetArraySchema.items.length === 1) {
                     return this.areSchemasCompatible(sourceArraySchema.items[0], targetArraySchema.items[0]);
-                } 
+                }
                 // Both are tuple definitions
                 else if (sourceArraySchema.items.length === targetArraySchema.items.length) { // Lengths must match for tuples
                     for (let i = 0; i < sourceArraySchema.items.length; i++) {
@@ -332,36 +338,36 @@ export class TypeCompatibility {
                     return true;
                 }
                 return false; // Mixed types (tuple vs homogeneous) or different length tuples
-                
+
             case 'object':
                 if (targetSchema.kind !== 'object') return false;
                 return this.areObjectSchemasCompatible(
-                    sourceSchema as ObjectSchema, 
+                    sourceSchema as ObjectSchema,
                     targetSchema as ObjectSchema
                 );
-                
+
             case 'custom':
                 if (targetSchema.kind !== 'custom') return false;
                 return (sourceSchema as CustomSchema).typeName === (targetSchema as CustomSchema).typeName;
-                
+
             default:
                 return false;
         }
     }
-    
+
     /**
      * @internal
      */
     private static areObjectSchemasCompatible(source: ObjectSchema, target: ObjectSchema): boolean {
         const targetRequiredKeys = new Set(target.required || []);
         const sourceKeys = new Set(Object.keys(source.properties));
-        
+
         for (const requiredKey of targetRequiredKeys) {
             if (!sourceKeys.has(requiredKey)) {
                 return false;
             }
         }
-        
+
         for (const [key, targetPropSchema] of Object.entries(target.properties)) {
             if (key in source.properties) {
                 if (!this.areSchemasCompatible(source.properties[key], targetPropSchema)) {
@@ -369,7 +375,7 @@ export class TypeCompatibility {
                 }
             }
         }
-        
+
         return true;
     }
 }

@@ -8,13 +8,13 @@ import { SchemaValidator } from '../validation/index';
 
 // 값 노드 팩토리
 export class ValueNodeFactory {
-    static createTypedNode<T extends string, U>(typeName: T, value: U): ValueNode<T, U> {
+    static async createTypedNode<T extends string, U>(typeName: T, value: U): Promise<ValueNode<T, U>> {
         const typeDefinition = TypeRegistry.getType(typeName);
         if (!typeDefinition) {
             throw new Error(`Unknown type: ${typeName}. Available types: ${TypeRegistry.getTypeNames().join(', ')}`);
         }
         
-        const validation = SchemaValidator.validateValue(value, typeDefinition.schema);
+        const validation = await SchemaValidator.validateValue(value, typeDefinition.schema);
         if (!validation.isValid) {
             throw new Error(`Schema validation failed for type '${typeName}': ${validation.errors.join('; ')}`);
         }
@@ -22,42 +22,42 @@ export class ValueNodeFactory {
         return { type: typeName, value };
     }
     
-    static createStringNode(value: string): ValueNode<'string', string> {
-        return this.createTypedNode('string', value);
+    static async createStringNode(value: string): Promise<ValueNode<'string', string>> {
+        return await this.createTypedNode('string', value);
     }
     
-    static createNumberNode(value: number): ValueNode<'number', number> {
-        return this.createTypedNode('number', value);
+    static async createNumberNode(value: number): Promise<ValueNode<'number', number>> {
+        return await this.createTypedNode('number', value);
     }
     
-    static createBooleanNode(value: boolean): ValueNode<'boolean', boolean> {
-        return this.createTypedNode('boolean', value);
+    static async createBooleanNode(value: boolean): Promise<ValueNode<'boolean', boolean>> {
+        return await this.createTypedNode('boolean', value);
     }
     
-    static tryCreateNode<T extends string, U>(
-        typeName: T, 
+    static async tryCreateNode<T extends string, U>(
+        typeName: T,
         value: U
-    ): { success: true; node: ValueNode<T, U> } | { success: false; error: string } {
+    ): Promise<{ success: true; node: ValueNode<T, U> } | { success: false; error: string }> {
         try {
-            const node = this.createTypedNode(typeName, value);
+            const node = await this.createTypedNode(typeName, value);
             return { success: true, node };
         } catch (error) {
-            return { 
-                success: false, 
-                error: error instanceof Error ? error.message : String(error) 
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : String(error)
             };
         }
     }
 }
 
 // 유틸리티 함수들
-export function validateTypeValue(typeName: string, value: unknown): string[] {
+export async function validateTypeValue(typeName: string, value: unknown): Promise<string[]> {
     const typeDefinition = TypeRegistry.getType(typeName);
     if (!typeDefinition) {
         return [`Unknown type: ${typeName}`];
     }
     
-    const validation = SchemaValidator.validateValue(value, typeDefinition.schema);
+    const validation = await SchemaValidator.validateValue(value, typeDefinition.schema);
     return validation.errors;
 }
 
